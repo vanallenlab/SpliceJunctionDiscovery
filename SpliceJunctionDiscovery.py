@@ -65,8 +65,8 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
             cigar_string = split_line[SAM_CIGAR_COL_INDEX]
             pos = int(split_line[SAM_CHROM_POS_INDEX])
             if 'N' in cigar_string and t_start < pos < t_stop:
+                    # Account for only one intronic region, or only the first of two in the case there are two
                     if cigar_string.count('N') <= 2:
-                        # Account for only one intronic region, or only the first of two in the case there are two
                         intron_length = length_of_first_intronic_section(cigar_string)
                         num_matches_before_intron_start = num_of_matches_before_first_intronic_section(cigar_string)
                         intron_start_position = pos + num_matches_before_intron_start - 1
@@ -86,9 +86,9 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
                         unique_splice_junction = '{},{},{}'.format(t_chrom, intron_start_position, intron_end_position)
                         splice_junctions[unique_splice_junction] += 1
 
+                    # Account for very small retained introns (they must be small for the whole intron to have been
+                    # captured within the length of one read), e.g. 13M221400N34M2658N29M
                     if cigar_string.count('N') == 2:
-                        # Account for very small retained introns (they must be small for the whole intron to have been
-                        # captured within the length of one read), e.g. 13M221400N34M2658N29M
                         section_after_first_intron = cigar_string.split('N')[1]
                         num_matches_before_second_intron = \
                             num_of_matches_before_first_intronic_section(section_after_first_intron)
