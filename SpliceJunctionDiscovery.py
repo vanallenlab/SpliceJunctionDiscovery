@@ -86,10 +86,30 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
                         unique_splice_junction = '{},{},{}'.format(t_chrom, intron_start_position, intron_end_position)
                         splice_junctions[unique_splice_junction] += 1
 
-                    elif cigar_string.count('N') == 2:
+                    if cigar_string.count('N') == 2:
                         # Account for very small retained introns (they must be small for the whole intron to have been
-                        # captured within the length of one read)
-                        pass
+                        # captured within the length of one read), e.g. 13M221400N34M2658N29M
+                        section_after_first_intron = cigar_string.split('N')[1]
+                        num_matches_before_second_intron = \
+                            num_of_matches_before_first_intronic_section(section_after_first_intron)
+                        second_intron_length = length_of_first_intronic_section(section_after_first_intron)
+                        second_intron_start_position = intron_end_position + num_matches_before_second_intron
+                        second_intron_end_position = second_intron_start_position + second_intron_length
+
+                        # For debugging purposes, if verbose is true, output some intermediate information
+                        if verbose:
+                            sys.stdout.write('{} ({} match, {} intronic)\t'
+                                             'read_start: {}\tintron_start: {}\tintron_end: {}\n'
+                                             .format(cigar_string,
+                                                     num_matches_before_second_intron,
+                                                     second_intron_length,
+                                                     pos,
+                                                     second_intron_start_position,
+                                                     second_intron_end_position))
+
+                        unique_splice_junction = '{},{},{}'.format(t_chrom, second_intron_start_position, second_intron_start_position)
+                        splice_junctions[unique_splice_junction] += 1
+
         except IndexError:
             pass
 
@@ -200,14 +220,17 @@ def main():
     map_splice_junction_discovery_across_genes(transcript_file, bam_file_paths, sample_ids, verbose, output_dir)
 
     # Reducing -- combine all of the files generated into one megafile which includes all lines. A simple cat.
+
     final_filename = '{}/final.txt'.format(output_dir)
     for root, dirs, files in os.walk(output_dir):
-        f = open(final_filename, "w+")
+        open(final_filename, "w")
         subprocess.call("echo 'gene\ttype\tchrom\tstart\tend\tinstances\tnum_samples\tsample_level_info' >> {}".format(final_filename), shell=True)
         for file in sorted(files):
-            gene_output_file = '{}/{}'.format(root, file)
-            print(gene_output_file)
-            subprocess.call('cat {} >> {}'.format(gene_output_file, final_filename), shell=True)
+            if '{}/{}'.format(root, file) != final_filename:
+                # This if statement is just in case the job is being rerun and the file system hasn't been reset/cleaned
+                gene_output_file = '{}/{}'.format(root, file)
+                subprocess.call('cat {} >> {}'.format(gene_output_file, final_filename), shell=True)
+
 
 if __name__ == '__main__':
     main()
