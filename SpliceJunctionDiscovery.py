@@ -168,10 +168,10 @@ def find_splice_junctions_for_gene(pool_arguments):
     summarize_splice_junctions(pa.get('t_gene'), global_event_counts, pa.get('output_dir'))
 
 
-def map_splice_junction_discovery_across_genes(transcript_file, bam_paths, sample_ids, verbose=False, output_dir=None):
+def map_splice_junction_discovery_across_genes(threads, transcript_file, bam_paths, sample_ids, verbose=False, output_dir=None):
     """Set up the parameters to map the splice junction discovery functions across all genes in a threaded manner"""
     pool_args = []
-    pool = ThreadPool(10)
+    pool = ThreadPool(threads)
     transcript_lines = open(transcript_file).readlines()
     for t in transcript_lines:
         if verbose:
@@ -203,6 +203,7 @@ def main():
     parser.add_argument('transcript_file', metavar='transcript_file', type=str,
                         default='reference/gencode.comprehensive.splice.junctions.txt')
     parser.add_argument('bam_folder', metavar='bam_folder', type=str, default='bams')
+    parser.add_argument('--threads', metavar='threads', type=int, default=10)
     parser.add_argument('--output_dir', metavar='output_dir', type=str)
     parser.add_argument('-v', action='store_true')
     parser.add_argument('-keep_gene_files', action='store_true')
@@ -212,6 +213,7 @@ def main():
     transcript_file = args.transcript_file
     bam_folder = args.bam_folder
     output_dir = args.output_dir
+    threads = args.threads
 
     if not output_dir:
         output_dir = 'sjd_output'
@@ -227,7 +229,7 @@ def main():
 
     # Mapping -- find the splice junctions across all samples, one gene per thread. Each thread generates a file.
     sys.stdout.write('>> Discovering splice junctions across all genes\n')
-    map_splice_junction_discovery_across_genes(transcript_file, bam_file_paths, sample_ids, verbose, output_dir)
+    map_splice_junction_discovery_across_genes(threads, transcript_file, bam_file_paths, sample_ids, verbose, output_dir)
 
     # Reducing -- combine all of the files generated into one megafile which includes all lines.
     sys.stdout.write('>> Combining all data into final file: {}\n'.format(final_filename))
