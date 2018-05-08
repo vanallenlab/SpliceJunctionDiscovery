@@ -158,7 +158,7 @@ def find_splice_junctions_for_gene(pool_arguments):
         if pa.get('verbose'):
             sys.stdout.write("Sample: {}\tGene: {}\n".format(sample_id, pa.get('t_gene')))
         splice_junctions = find_splice_junctions(bam_file_path,
-                                                 int(pa.get('t_chrom')),
+                                                 pa.get('t_chrom'),
                                                  int(pa.get('t_start')),
                                                  int(pa.get('t_stop')),
                                                  verbose=pa.get('verbose'))
@@ -176,6 +176,8 @@ def map_splice_junction_discovery_across_genes(transcript_file, bam_paths, sampl
     for t in transcript_lines:
         if verbose:
             sys.stdout.write('>> {}\n'.format(t))
+        if 'CHROM' in t:
+            continue
         t_gene, t_enst, _, t_chrom, t_start, t_stop, t_gene_type = t.split('\t')
         t_gene = t_gene.split('\n')[0]
         t_gene_type = t_gene_type.split('\n')[0]
@@ -183,7 +185,7 @@ def map_splice_junction_discovery_across_genes(transcript_file, bam_paths, sampl
                           'sample_ids': sample_ids,
                           't_gene': t_gene,
                           't_gene_type': t_gene_type,
-                          't_chrom': int(t_chrom),
+                          't_chrom': t_chrom,
                           't_start': int(t_start),
                           't_stop': int(t_stop),
                           'verbose': verbose,
@@ -231,7 +233,7 @@ def main():
     sys.stdout.write('>> Combining all data into final file: {}\n'.format(final_filename))
     for root, dirs, files in os.walk(output_dir):
         open(final_filename, "w")
-        subprocess.call("echo 'gene\ttype\tchrom\tstart\tend\tinstances\tnum_samples\tsample_level_info' >> {}".format(
+        subprocess.call("echo 'Gene\tType\tChrom\tStart\tEnd\tNTimesSeen\tNSamplesSeen\tSamples:NSeen' >> {}".format(
             final_filename), shell=True)
         for file_counter, file in enumerate(sorted([f for f in files if f != final_filename])):
             gene_output_file = '{}/{}'.format(root, file)
