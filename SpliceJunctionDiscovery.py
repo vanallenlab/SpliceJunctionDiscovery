@@ -227,7 +227,7 @@ def main():
     sys.stdout.write('>> Discovering splice junctions across all genes\n')
     map_splice_junction_discovery_across_genes(transcript_file, bam_file_paths, sample_ids, verbose, output_dir)
 
-    # Reducing -- combine all of the files generated into one megafile which includes all lines. A simple cat.
+    # Reducing -- combine all of the files generated into one megafile which includes all lines.
     sys.stdout.write('>> Combining all data into final file: {}\n'.format(final_filename))
     for root, dirs, files in os.walk(output_dir):
         open(final_filename, "w")
