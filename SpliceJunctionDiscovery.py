@@ -36,6 +36,17 @@ def num_of_matches_before_first_intronic_section(cigar_string):
     return [int(regex_num) for regex_num in re.findall('\d+', pre_N)][-1]
 
 
+def write_cigar_debugging_info(cigar_string, num_matches_before_start, intron_length, pos, intron_start, intron_end):
+    sys.stdout.write('>> {} ({} match, {} intronic)\t'
+                     'read_start: {}\tintron_start: {}\tintron_end: {}\n'
+                     .format(cigar_string,
+                             num_matches_before_start,
+                             intron_length,
+                             pos,
+                             intron_start,
+                             intron_end))
+
+
 def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False):
     """The meat of the script. Use samtools view along with some included filtering parameters described below to
     view reads and alignments representing intronic regions, then parse the CIGAR strings to figure out the start and
@@ -53,7 +64,7 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
     sam_view = subprocess.check_output(samtools_view.split())
 
     # Split the sam_view output string into each line comprising it
-    sam_lines = str(sam_view).split('\\n')
+    sam_lines = str(sam_view).split('\n')
 
     # A dictionary that will keep track of how many times a particular junction is found
     splice_junctions = defaultdict(int)
@@ -61,7 +72,7 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
     # Only look at the exon junction spanning lines, for which the CIGAR string will contain an 'N' character
     for line in sam_lines:
         try:
-            split_line = line.split('\\t')
+            split_line = line.split('\t')
             cigar_string = split_line[SAM_CIGAR_COL_INDEX]
             pos = int(split_line[SAM_CHROM_POS_INDEX])
             if 'N' in cigar_string and t_start < pos < t_stop:
@@ -74,14 +85,8 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
 
                         if verbose:
                             # For debugging purposes, if verbose is true, output some intermediate information
-                            sys.stdout.write('{} ({} match, {} intronic)\t'
-                                             'read_start: {}\tintron_start: {}\tintron_end: {}\n'
-                                             .format(cigar_string,
-                                                     num_matches_before_intron_start,
-                                                     intron_length,
-                                                     pos,
-                                                     intron_start_position,
-                                                     intron_end_position))
+                            write_cigar_debugging_info(cigar_string, num_matches_before_intron_start, intron_length,
+                                                       pos, intron_start_position, intron_end_position)
 
                         unique_splice_junction = '{},{},{}'.format(t_chrom, intron_start_position, intron_end_position)
                         splice_junctions[unique_splice_junction] += 1
@@ -98,16 +103,12 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
 
                         # For debugging purposes, if verbose is true, output some intermediate information
                         if verbose:
-                            sys.stdout.write('{} ({} match, {} intronic)\t'
-                                             'read_start: {}\tintron_start: {}\tintron_end: {}\n'
-                                             .format(cigar_string,
-                                                     num_matches_before_second_intron,
-                                                     second_intron_length,
-                                                     pos,
-                                                     second_intron_start_position,
-                                                     second_intron_end_position))
+                            write_cigar_debugging_info(cigar_string, num_matches_before_second_intron,
+                                                       second_intron_length, pos, second_intron_start_position,
+                                                       second_intron_end_position)
 
-                        unique_splice_junction = '{},{},{}'.format(t_chrom, second_intron_start_position, second_intron_start_position)
+                        unique_splice_junction = '{},{},{}'.format(t_chrom, second_intron_start_position,
+                                                                   second_intron_start_position)
                         splice_junctions[unique_splice_junction] += 1
 
         except IndexError:
@@ -174,7 +175,7 @@ def map_splice_junction_discovery_across_genes(transcript_file, bam_paths, sampl
     transcript_lines = open(transcript_file).readlines()
     for t in transcript_lines:
         if verbose:
-            sys.stdout.write('{}\n'.format(t))
+            sys.stdout.write('>> {}\n'.format(t))
         t_gene, t_enst, _, t_chrom, t_start, t_stop, t_gene_type = t.split('\t')
         t_gene = t_gene.split('\n')[0]
         t_gene_type = t_gene_type.split('\n')[0]
@@ -197,10 +198,12 @@ def main():
     """If output directory is not provided, all files and intermediate files will be placed in a newly generated folder
     called sjd_output in the current working directory."""
     parser = argparse.ArgumentParser(description='Discover splice junctions from a list of bam files')
-    parser.add_argument('transcript_file', metavar='transcript_file', type=str, default='reference/gencode.comprehensive.splice.junctions.txt')
+    parser.add_argument('transcript_file', metavar='transcript_file', type=str,
+                        default='reference/gencode.comprehensive.splice.junctions.txt')
     parser.add_argument('bam_folder', metavar='bam_folder', type=str, default='bams')
     parser.add_argument('--output_dir', metavar='output_dir', type=str)
     parser.add_argument('-v', action='store_true')
+    parser.add_argument('-keep_gene_files', action='store_true')
 
     args = parser.parse_args()
 
@@ -212,24 +215,32 @@ def main():
         output_dir = 'sjd_output'
         subprocess.call(['mkdir', output_dir])
 
+    final_filename = '{}/final.txt'.format(output_dir)
+    if os.path.isfile(final_filename):
+        sys.exit('File already exists: {}. Please delete to rerun.'.format(final_filename))
+
     verbose = args.v
     bam_file_paths = get_bam_files_in_folder(bam_folder)
     sample_ids = [get_id_from_bam_name(bam_file_path) for bam_file_path in bam_file_paths]
 
     # Mapping -- find the splice junctions across all samples, one gene per thread. Each thread generates a file.
+    sys.stdout.write('>> Discovering splice junctions across all genes\n')
     map_splice_junction_discovery_across_genes(transcript_file, bam_file_paths, sample_ids, verbose, output_dir)
 
     # Reducing -- combine all of the files generated into one megafile which includes all lines. A simple cat.
-
-    final_filename = '{}/final.txt'.format(output_dir)
+    sys.stdout.write('>> Combining all data into final file: {}\n'.format(final_filename))
     for root, dirs, files in os.walk(output_dir):
         open(final_filename, "w")
-        subprocess.call("echo 'gene\ttype\tchrom\tstart\tend\tinstances\tnum_samples\tsample_level_info' >> {}".format(final_filename), shell=True)
-        for file in sorted(files):
-            if '{}/{}'.format(root, file) != final_filename:
-                # This if statement is just in case the job is being rerun and the file system hasn't been reset/cleaned
-                gene_output_file = '{}/{}'.format(root, file)
-                subprocess.call('cat {} >> {}'.format(gene_output_file, final_filename), shell=True)
+        subprocess.call("echo 'gene\ttype\tchrom\tstart\tend\tinstances\tnum_samples\tsample_level_info' >> {}".format(
+            final_filename), shell=True)
+        for file_counter, file in enumerate(sorted([f for f in files if f != final_filename])):
+            gene_output_file = '{}/{}'.format(root, file)
+            sys.stdout.write('\t* ({}/{}) adding data from {}\n'.format(file_counter+1, len(files), gene_output_file))
+            subprocess.call('cat {} >> {}'.format(gene_output_file, final_filename), shell=True)
+            # After feeding the contents into the aggregate file, delete the gene-level file
+            if not args.keep_gene_files:
+                subprocess.call('rm {}'.format(gene_output_file), shell=True)
+        sys.stdout.write(">> Done! Output is in final file: {}\n".format(final_filename))
 
 
 if __name__ == '__main__':
