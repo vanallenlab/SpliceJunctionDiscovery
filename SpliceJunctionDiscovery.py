@@ -6,10 +6,8 @@ import re
 from collections import defaultdict
 from multiprocessing.dummy import Pool as ThreadPool
 
-SAM_CHROM_COL_INDEX = 2
-SAM_CHROM_POS_INDEX = 3
+SAM_POS_COL_INDEX = 3
 SAM_CIGAR_COL_INDEX = 5
-SAM_COL_INDICES = [SAM_CHROM_COL_INDEX, SAM_CHROM_POS_INDEX, SAM_CIGAR_COL_INDEX]
 
 
 def get_bam_files_in_folder(bam_folder):
@@ -74,7 +72,7 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
         try:
             split_line = line.split('\t')
             cigar_string = split_line[SAM_CIGAR_COL_INDEX]
-            pos = int(split_line[SAM_CHROM_POS_INDEX])
+            pos = int(split_line[SAM_POS_COL_INDEX])
             if 'N' in cigar_string and t_start < pos < t_stop:
                     # Account for only one intronic region, or only the first of two in the case there are two
                     if cigar_string.count('N') <= 2:
