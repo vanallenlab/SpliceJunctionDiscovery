@@ -168,7 +168,6 @@ def main(args):
     if args.normalize:
         splice_junctions = get_junctions(args.splice_file)
         annotated_counts = get_annotated_counts(splice_junctions, annotated_junction_set)
-        print(annotated_counts)
         normalize_counts(splice_junctions, annotated_counts)
 
 
