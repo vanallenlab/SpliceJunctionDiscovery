@@ -121,7 +121,7 @@ def get_id_from_bam_name(bam_file_path):
     return filename
 
 
-def summarize_splice_junctions(gene, global_event_counts, output_dir='.'):
+def summarize_splice_junctions(gene, global_event_counts, sample_ids, output_dir='.'):
     """Given a dictionary summarizing the global and per sample occurrence counts of unique splice junctions,
     output a file summarizing the results"""
     output_file_name = '{}/{}_{}_junctions.txt'.format(output_dir, gene, len(global_event_counts))
@@ -133,15 +133,12 @@ def summarize_splice_junctions(gene, global_event_counts, output_dir='.'):
 
             total_count = 0
             sample_summaries = []
-            for sample, count in per_sample_counts.items():
-                total_count += count
-                sample_summaries.append('{}:{}'.format(sample, count))
 
-            sample_summary_string = '{}'.format(','.join(sample_summaries))
+            sample_counts = [str(per_sample_counts.get(s, 0)) for s in sample_ids]
             num_samples_with_this_event = len(per_sample_counts)
 
             entry = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(gene, gene_type, chrom, start, end, total_count,
-                                                               num_samples_with_this_event, sample_summary_string)
+                                                               num_samples_with_this_event, '\t'.join(sample_counts))
             f.write(entry)
 
 
@@ -163,7 +160,7 @@ def find_splice_junctions_for_gene(pool_arguments):
         for splice_junction, count in splice_junctions.items():
             splice_junction_with_gene_info = '{},{},{}'.format(pa.get('t_gene'), pa.get('t_gene_type'), splice_junction)
             global_event_counts[splice_junction_with_gene_info][sample_id] = count
-    summarize_splice_junctions(pa.get('t_gene'), global_event_counts, pa.get('output_dir'))
+    summarize_splice_junctions(pa.get('t_gene'), global_event_counts, pa.get('sample_ids'), pa.get('output_dir'))
 
 
 def map_splice_junction_discovery_across_genes(threads, transcript_file, bam_paths, sample_ids, verbose=False, output_dir=None):
@@ -223,7 +220,7 @@ def main():
 
     verbose = args.v
     bam_file_paths = get_bam_files_in_folder(bam_folder)
-    sample_ids = [get_id_from_bam_name(bam_file_path) for bam_file_path in bam_file_paths]
+    sample_ids = sorted([get_id_from_bam_name(bam_file_path) for bam_file_path in bam_file_paths])
 
     # Mapping -- find the splice junctions across all samples, one gene per thread. Each thread generates a file.
     sys.stdout.write('>> Discovering splice junctions across all genes\n')
@@ -233,7 +230,8 @@ def main():
     sys.stdout.write('>> Combining all data into final file: {}\n'.format(final_filename))
     for root, dirs, files in os.walk(output_dir):
         open(final_filename, "w")
-        subprocess.call("echo 'Gene\tType\tChrom\tStart\tEnd\tNTimesSeen\tNSamplesSeen\tSamples:NSeen' >> {}".format(
+        subprocess.call("echo 'Gene\tType\tChrom\tStart\tEnd\tNTimesSeen\tNSamplesSeen\t{}' >> {}".format(
+            '\t'.join(sample_ids),
             final_filename), shell=True)
         for file_counter, file in enumerate(sorted([f for f in files if f != final_filename])):
             gene_output_file = '{}/{}'.format(root, file)
