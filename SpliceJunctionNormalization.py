@@ -17,6 +17,7 @@ def get_annotated_counts(splice_junctions, annotated_junctions):
                                         junction.get('samptimes')
         junction_string = '{}:{}-{}'.format(chrom, start, stop)
         if junction_string in annotated_junctions:  # only consider both annotated
+
             for pos in [start, stop]:
                 pos = "{}:{}".format(chrom, pos)
                 for sample, count in samptimes.items():
@@ -29,7 +30,7 @@ def get_annotated_counts(splice_junctions, annotated_junctions):
 
 
 def normalize_counts(splice_junctions, annotated_counts, sample_ids):
-    print('Gene	Type\tChrom\tStart\tEnd\tNTimesSeen\tNSamplesSeen\t{}\tAnnotations\t{}'.format(
+    print('Gene	Type\tChrom\tStart\tEnd\tTotalCount\tSampleCount\t{}\tAnnotations\t{}'.format(
         '\t'.join([s.strip() for s in sample_ids]),
         '\t'.join(['{}_normed'.format(s.strip()) for s in sample_ids])
     ))
@@ -45,8 +46,8 @@ def normalize_counts(splice_junctions, annotated_counts, sample_ids):
         sample_counts_sorted = [samptimes.get(s) for s in sample_ids]
         annotated_start = annotated_counts.get('{}:{}'.format(chrom, start))
         annotated_stop = annotated_counts.get('{}:{}'.format(chrom, stop))
-        full_junction_string = "{}:{}-{}".format(chrom, start, stop)
         tag = ''
+
         if annotated_start or annotated_stop:
             # Canonical splicing and exon skipping -- both junction start and stop sites are annotated / known
             if annotated_start and annotated_stop:
@@ -75,7 +76,7 @@ def normalize_counts(splice_junctions, annotated_counts, sample_ids):
 
             normalized_cols_sorted = [normalized_dict[s] for s in sample_ids]
             line_to_print = "\t".join(
-                [gene, gene_type, full_junction_string, ntimes, nsamp,
+                [gene, gene_type, chrom, start, stop, ntimes, nsamp,
                  "\t".join(stringify_list_contents(sample_counts_sorted)),
                  tag,
                  "\t".join(stringify_list_contents(normalized_cols_sorted))]
@@ -86,7 +87,7 @@ def normalize_counts(splice_junctions, annotated_counts, sample_ids):
         elif annotated_stop is None and annotated_stop is None:
             tag = "Neither annotated"
             line_to_print = "\t".join(
-                [gene, gene_type, full_junction_string, ntimes, nsamp,
+                [gene, gene_type, chrom, start, stop, ntimes, nsamp,
                  "\t".join(stringify_list_contents(sample_counts_sorted)),
                  tag,
                  '\t'.join(["" for s in sample_ids])]
