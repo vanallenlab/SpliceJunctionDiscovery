@@ -29,8 +29,8 @@ def get_annotated_counts(splice_junctions, annotated_junctions):
     return annotated_counts
 
 
-def normalize_counts(splice_junctions, annotated_counts, sample_ids):
-    print('Gene	Type\tChrom\tStart\tEnd\tTotalCount\tSampleCount\t{}\tAnnotations\t{}'.format(
+def normalize_counts(splice_junctions, annotated_counts, sample_ids, annotated_junctions):
+    print('Gene	Type\tChrom\tStart\tEnd\tTotalCount\tSampleCount\t{}\tAnnotations\tSeenInTranscriptsList\t{}'.format(
         '\t'.join([s.strip() for s in sample_ids]),
         '\t'.join(['{}_normed'.format(s.strip()) for s in sample_ids])
     ))
@@ -46,6 +46,11 @@ def normalize_counts(splice_junctions, annotated_counts, sample_ids):
         sample_counts_sorted = [samptimes.get(s) for s in sample_ids]
         annotated_start = annotated_counts.get('{}:{}'.format(chrom, start))
         annotated_stop = annotated_counts.get('{}:{}'.format(chrom, stop))
+        junction_string = '{}:{}-{}'.format(chrom, start, stop)
+        seenBefore = "0"
+        if junction_string in annotated_junctions:
+            seenBefore = "1"
+
         tag = ''
 
         if annotated_start or annotated_stop:
@@ -79,6 +84,7 @@ def normalize_counts(splice_junctions, annotated_counts, sample_ids):
                 [gene, gene_type, chrom, start, stop, ntimes, nsamp,
                  "\t".join(stringify_list_contents(sample_counts_sorted)),
                  tag,
+                 seenBefore,
                  "\t".join(stringify_list_contents(normalized_cols_sorted))]
             )
             print line_to_print
@@ -90,6 +96,7 @@ def normalize_counts(splice_junctions, annotated_counts, sample_ids):
                 [gene, gene_type, chrom, start, stop, ntimes, nsamp,
                  "\t".join(stringify_list_contents(sample_counts_sorted)),
                  tag,
+                 seenBefore,
                  '\t'.join(["" for s in sample_ids])]
             )
             print line_to_print
@@ -170,7 +177,7 @@ def main(args):
 
         splice_junctions = get_junctions(args.splice_file, sample_ids)
         annotated_counts = get_annotated_counts(splice_junctions, annotated_junction_set)
-        normalize_counts(splice_junctions, annotated_counts, sample_ids)
+        normalize_counts(splice_junctions, annotated_counts, sample_ids, annotated_junction_set)
 
 
 if __name__ == "__main__":
