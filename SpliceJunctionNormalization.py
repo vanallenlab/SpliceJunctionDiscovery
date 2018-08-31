@@ -192,8 +192,6 @@ if __name__ == "__main__":
     parser.add_argument('-start_col', help='Junction start column', type=int, default=1)
     parser.add_argument('-stop_col', help='Junction stop column', type=int, default=2)
     mode_arguments = parser.add_mutually_exclusive_group(required=True)
-    mode_arguments.add_argument('--getunannotated', action='store_true',
-                                help='From splice junction file, will only return ones not in sjout')
     mode_arguments.add_argument('--normalize', action='store_true',
                                 help='Local normalization on splice junction file based on annotated junctions')
     args = parser.parse_args()

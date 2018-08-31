@@ -135,6 +135,10 @@ def summarize_splice_junctions(gene, global_event_counts, sample_ids, output_dir
             sample_summaries = []
 
             sample_counts = [str(per_sample_counts.get(s, 0)) for s in sample_ids]
+
+            for count in sample_counts:
+                total_count += int(count)
+
             num_samples_with_this_event = len(per_sample_counts)
 
             entry = '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(gene, gene_type, chrom, start, end, total_count,
