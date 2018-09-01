@@ -106,7 +106,7 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
                                                        second_intron_end_position)
 
                         unique_splice_junction = '{},{},{}'.format(t_chrom, second_intron_start_position,
-                                                                   second_intron_start_position)
+                                                                   second_intron_end_position)
                         splice_junctions[unique_splice_junction] += 1
 
         except IndexError:
