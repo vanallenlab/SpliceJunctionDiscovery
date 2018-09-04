@@ -30,8 +30,8 @@ def length_of_first_intronic_section(cigar_string):
 def num_of_matches_before_first_intronic_section(cigar_string):
     """Calculate the number of matches before intronic section of the CIGAR string. Example CIGAR string: '3M1D40M20N'
     """
-    pre_N = cigar_string.split('M')[0]
-    return [int(regex_num) for regex_num in re.findall('\d+', pre_N)][-1]
+    pre_N = cigar_string.split('N')[0]
+    return sum([int(regex_num) for regex_num in re.findall('\d+', pre_N)][0:-1])
 
 
 def write_cigar_debugging_info(cigar_string, num_matches_before_start, intron_length, pos, intron_start, intron_end):
