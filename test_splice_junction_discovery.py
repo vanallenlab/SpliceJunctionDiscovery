@@ -18,7 +18,7 @@ class TestDeconstructSigs(unittest.TestCase):
 
     def test_num_of_matches_before_first_intronic_section_insertion(self):
         cigar_string = '22M1I19M1893N6M'
-        self.assertEqual(num_of_matches_before_first_intronic_section(cigar_string), 22+1+19)
+        self.assertEqual(num_of_matches_before_first_intronic_section(cigar_string), 22+19)
 
     def test_length_of_first_intronic_section_double(self):
         cigar_string = '13M221400N34M2658N29M'
