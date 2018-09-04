@@ -35,7 +35,7 @@ def num_of_matches_before_first_intronic_section(cigar_string):
     letters = [regex_letter for regex_letter in re.findall('[A-Z]', pre_N)]
     sum = 0
     for t in zip(numbers, letters):
-        if t[1] not in {'I', 'S'}:
+        if t[1] not in {'I', 'S', 'P', 'H'}:
             sum += t[0]
     return sum
 
