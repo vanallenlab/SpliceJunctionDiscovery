@@ -4,6 +4,10 @@ from SpliceJunctionDiscovery import num_of_matches_before_first_intronic_section
 
 
 class TestDeconstructSigs(unittest.TestCase):
+    def test_num_of_matches_before_first_intronic_section_s(self):
+        cigar_string = '8S13M221400N34M2658N29M'
+        self.assertEqual(num_of_matches_before_first_intronic_section(cigar_string), 13)
+
     def test_num_of_matches_before_first_intronic_section_double(self):
         cigar_string = '13M221400N34M2658N29M'
         self.assertEqual(num_of_matches_before_first_intronic_section(cigar_string), 13)
