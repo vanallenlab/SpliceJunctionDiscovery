@@ -51,6 +51,44 @@ def write_cigar_debugging_info(cigar_string, num_matches_before_start, intron_le
                              intron_end))
 
 
+def get_first_splice_junction(cigar_string, t_chrom, pos, verbose=False):
+    intron_length = length_of_first_intronic_section(cigar_string)
+    num_matches_before_intron_start = num_of_matches_before_first_intronic_section(cigar_string)
+    intron_start_position = pos + num_matches_before_intron_start # inclusive
+    intron_end_position = pos + num_matches_before_intron_start + intron_length # not inclusive
+
+    if verbose:
+        # For debugging purposes, if verbose is true, output some intermediate information
+        write_cigar_debugging_info(cigar_string, num_matches_before_intron_start, intron_length,
+                                   pos, intron_start_position, intron_end_position)
+
+    unique_splice_junction = '{},{},{}'.format(t_chrom, intron_start_position, intron_end_position)
+    return unique_splice_junction
+
+
+def get_second_splice_junction(cigar_string, t_chrom, pos, first_splice_junction_end, verbose=False):
+    section_after_first_intron = cigar_string.split('N')[1]
+    num_matches_before_second_intron = \
+        num_of_matches_before_first_intronic_section(section_after_first_intron)
+    second_intron_length = length_of_first_intronic_section(section_after_first_intron)
+    second_intron_start_position = first_splice_junction_end + num_matches_before_second_intron
+    second_intron_end_position = second_intron_start_position + second_intron_length
+
+    # For debugging purposes, if verbose is true, output some intermediate information
+    if verbose:
+        write_cigar_debugging_info(cigar_string, num_matches_before_second_intron,
+                                   second_intron_length, pos, second_intron_start_position,
+                                   second_intron_end_position)
+
+    unique_splice_junction = '{},{},{}'.format(t_chrom, second_intron_start_position,
+                                               second_intron_end_position)
+    return unique_splice_junction
+
+
+def get_end_position_from_junction(unique_splice_junction):
+    return int(unique_splice_junction.split(',')[2])
+
+
 def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False):
     """The meat of the script. Use samtools view along with some included filtering parameters described below to
     view reads and alignments representing intronic regions, then parse the CIGAR strings to figure out the start and
@@ -82,37 +120,16 @@ def find_splice_junctions(bam_file_path, t_chrom, t_start, t_stop, verbose=False
             if 'N' in cigar_string and t_start < pos < t_stop:
                     # Account for only one intronic region, or only the first of two in the case there are two
                     if cigar_string.count('N') <= 2:
-                        intron_length = length_of_first_intronic_section(cigar_string)
-                        num_matches_before_intron_start = num_of_matches_before_first_intronic_section(cigar_string)
-                        intron_start_position = pos + num_matches_before_intron_start - 1
-                        intron_end_position = pos + num_matches_before_intron_start + intron_length
-
-                        if verbose:
-                            # For debugging purposes, if verbose is true, output some intermediate information
-                            write_cigar_debugging_info(cigar_string, num_matches_before_intron_start, intron_length,
-                                                       pos, intron_start_position, intron_end_position)
-
-                        unique_splice_junction = '{},{},{}'.format(t_chrom, intron_start_position, intron_end_position)
+                        unique_splice_junction = get_first_splice_junction(cigar_string, t_chrom, pos, verbose=verbose)
                         splice_junctions[unique_splice_junction] += 1
 
                     # Account for very small retained introns (they must be small for the whole intron to have been
                     # captured within the length of one read), e.g. 13M221400N34M2658N29M
-                    if cigar_string.count('N') == 2:
-                        section_after_first_intron = cigar_string.split('N')[1]
-                        num_matches_before_second_intron = \
-                            num_of_matches_before_first_intronic_section(section_after_first_intron)
-                        second_intron_length = length_of_first_intronic_section(section_after_first_intron)
-                        second_intron_start_position = intron_end_position + num_matches_before_second_intron
-                        second_intron_end_position = second_intron_start_position + second_intron_length
+                    if cigar_string.count('N') == 2 and unique_splice_junction:
+                        intron_end_position = get_end_position_from_junction(unique_splice_junction)  # not inclusive
+                        unique_splice_junction = get_second_splice_junction(cigar_string, t_chrom, pos,
+                                                                            intron_end_position, verbose=verbose)
 
-                        # For debugging purposes, if verbose is true, output some intermediate information
-                        if verbose:
-                            write_cigar_debugging_info(cigar_string, num_matches_before_second_intron,
-                                                       second_intron_length, pos, second_intron_start_position,
-                                                       second_intron_end_position)
-
-                        unique_splice_junction = '{},{},{}'.format(t_chrom, second_intron_start_position,
-                                                                   second_intron_end_position)
                         splice_junctions[unique_splice_junction] += 1
 
         except IndexError:

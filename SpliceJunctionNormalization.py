@@ -149,7 +149,8 @@ def make_annotated_junction_set(transcript_model, chrom_col, start_col, stop_col
         for offset in range(-1, 2):  # [-1,0,1]
             start_flank = start + offset
             stop_flank = stop + offset
-            annotated_junctions.add("{}:{}-{}".format(chrom, start_flank, stop_flank))
+            junction = "{}:{}-{}".format(chrom, start_flank, stop_flank)
+            annotated_junctions.add(junction)
 
         # generate junctions with the most extreme flanking regions of start and stop
         outer_junction = "{}:{}-{}".format(chrom, start - 1, stop + 1)
