@@ -148,6 +148,9 @@ def make_annotated_junction_set(transcript_model, chrom_col, start_col, stop_col
         # shifts the junction while maintaining the same distance between start and stop
         for offset in range(-1, 2):  # [-1,0,1]
             start_flank = start + offset
+
+            # Offset by one because gencode end positions are 2 positions into the exon
+            # -- we want the first base of the exon (non-inclusive end position for intron)
             stop_flank = stop -1 + offset
             junction = "{}:{}-{}".format(chrom, start_flank, stop_flank)
             annotated_junctions.add(junction)
