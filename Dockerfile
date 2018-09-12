@@ -21,6 +21,7 @@ WORKDIR /
 
 COPY SpliceJunctionDiscovery.py /
 COPY SpliceJunctionNormalization.py /
+COPY SpliceJunctionFiltering.py /
 COPY reference /reference/
 
 RUN mkdir outputs
@@ -53,3 +54,5 @@ RUN ln -s $SAMTOOLS_INSTALL_DIR/bin/samtools /usr/bin/samtools && \
   rm -rf /tmp/samtools-1.7
 
 WORKDIR /
+
+RUN pip install pandas
