@@ -226,7 +226,9 @@ def main():
     parser = argparse.ArgumentParser(description='Discover splice junctions from a list of bam files')
     parser.add_argument('transcript_file', metavar='transcript_file', type=str,
                         default='reference/gencode.comprehensive.splice.junctions.txt')
-    parser.add_argument('bam_folder', metavar='bam_folder', type=str, default='bams')
+    parser.add_argument('--bam_folder', metavar='bam_folder', type=str)
+    parser.add_argument('--bam_file', metavar='bam_file', type=str)
+    parser.add_argument('--sample_id', metavar='sample_id', type=str, default='#')
     parser.add_argument('--threads', metavar='threads', type=int, default=10)
     parser.add_argument('--output_dir', metavar='output_dir', type=str)
     parser.add_argument('-v', action='store_true')
@@ -238,6 +240,11 @@ def main():
     bam_folder = args.bam_folder
     output_dir = args.output_dir
     threads = args.threads
+    verbose = args.v
+
+    # This is for the case where we want to process splice junctions one file at a time
+    bam_file = args.bam_file
+    sample_id = args.sample_id
 
     if not output_dir:
         output_dir = 'sjd_output'
@@ -247,11 +254,19 @@ def main():
     if os.path.isfile(final_filename):
         sys.exit('File already exists: {}. Please delete to rerun.'.format(final_filename))
 
-    verbose = args.v
-    bam_file_paths = get_bam_files_in_folder(bam_folder)
-    sample_id_to_bam_file_path = sample_ids = {
-        get_id_from_bam_name(bam_file_path): bam_file_path for bam_file_path in bam_file_paths
-    }
+    # For smaller sample sets, we can run them all at the same time
+    if bam_folder:
+        bam_file_paths = get_bam_files_in_folder(bam_folder)
+        sample_id_to_bam_file_path = sample_ids = {
+            get_id_from_bam_name(bam_file_path): bam_file_path for bam_file_path in bam_file_paths
+        }
+
+    # For larger sample sets, it is too time-consuming to run them all at the same time, so we do it one at a time and
+    # then combine the results downstream
+    elif bam_file:
+        sample_id_to_bam_file_path = sample_ids = {
+            sample_id: bam_file
+        }
 
     # Mapping -- find the splice junctions across all samples, one gene per thread. Each thread generates a file.
     sys.stdout.write('>> Discovering splice junctions across all genes\n')
@@ -276,3 +291,29 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+"""
+Example run using folder of bams:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--threads
+2
+--output_dir
+/Users/erickofman/Documents/Projects/SpliceJunctions/PythonRNASeqJunctions/sample_id_adding
+/Users/erickofman/Documents/Projects/SpliceJunctions/PythonRNASeqJunctions/reference/example.gene.NEB.list
+--bam_folder
+/Users/erickofman/Documents/Projects/SpliceJunctions/PythonRNASeqJunctions/example_bams
+
+
+Example run using individual bam:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--threads
+2
+--output_dir
+/Users/erickofman/Documents/Projects/SpliceJunctions/PythonRNASeqJunctions/individual_bam
+/Users/erickofman/Documents/Projects/SpliceJunctions/PythonRNASeqJunctions/reference/example.gene.NEB.list
+--bam_file
+/Users/erickofman/Documents/Projects/SpliceJunctions/PythonRNASeqJunctions/example_bams/Patient.D1.small.sorted.deduped.bam
+--sample_id
+D1
+"""
